@@ -8,3 +8,4 @@ obj/
 *.db
 .vscode/
 .env
+.vs/

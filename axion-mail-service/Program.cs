@@ -15,6 +15,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.Urls.Add("http://localhost:25004");
+
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
