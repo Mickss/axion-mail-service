@@ -3,19 +3,19 @@
 namespace axion_mail_service.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
     public class EmailController : ControllerBase
     {
-        [HttpPost("send-reset-link")]
+        [HttpPost("send-email")]
         public IActionResult SendResetLink([FromBody] EmailRequest request)
         {
-            Console.WriteLine($"[C# EmailService] Password reset request received for: {request.Email}");
-            return Ok(new { message = "Reset link sent (simulated)." });
+            Console.WriteLine($"[C# EmailService] Request: {request.Email}, {request.TemplateId}");
+            return Ok(new { message = "Email sent." });
         }
     }
 
     public class EmailRequest
     {
         public string Email { get; set; }
+        public string TemplateId { get; set; }
     }
 }
