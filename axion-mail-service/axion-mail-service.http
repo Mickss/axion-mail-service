@@ -1,0 +1,6 @@
+@axion_mail_service_HostAddress = http://localhost:5009
+
+GET {{axion_mail_service_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
