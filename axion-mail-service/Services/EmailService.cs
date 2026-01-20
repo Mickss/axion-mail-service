@@ -1,67 +1,102 @@
-﻿using Microsoft.Extensions.Options;
-using System.Net.Http.Headers;
-using System.Text.Json;
-using System.Text;
+﻿using System.Text.Json;
 
 namespace axion_mail_service.Services
 {
     public interface IEmailService
     {
-        Task<EmailServiceResult> SendEmailAsync(EmailRequest request);
+        Task<EmailServiceResult> SendEmailAsync(string toEmail, string subject, string htmlContent, string? toName = null);
     }
 
     public class EmailService : IEmailService
     {
         private readonly IHttpClientFactory _httpClientFactory;
-        private readonly MailerSendSettings _settings;
+        private readonly ILogger<EmailService> _logger;
+        private readonly IConfiguration _configuration;
 
         public EmailService(
             IHttpClientFactory httpClientFactory,
-            IOptions<MailerSendSettings> settings)
+            ILogger<EmailService> logger,
+            IConfiguration configuration)
         {
             _httpClientFactory = httpClientFactory;
-            _settings = settings.Value;
+            _logger = logger;
+            _configuration = configuration;
         }
 
-        public async Task<EmailServiceResult> SendEmailAsync(EmailRequest request)
+        public async Task<EmailServiceResult> SendEmailAsync(
+            string toEmail,
+            string subject,
+            string htmlContent,
+            string? toName = null)
         {
-            var client = _httpClientFactory.CreateClient();
-            client.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue("Bearer", _settings.ApiToken);
+            var client = _httpClientFactory.CreateClient("Brevo");
+            var fromEmail = _configuration["Brevo:FromEmail"];
+            var fromName = _configuration["Brevo:FromName"];
 
-            var payload = new
+            var brevoPayload = new
             {
-                template_id = request.TemplateId,
-                to = new[] {
-                    new {
-                        email = request.RecipientEmail,
-                        name = request.RecipientName
+                sender = new
+                {
+                    name = fromName,
+                    email = fromEmail
+                },
+                to = new[]
+                {
+                    new
+                    {
+                        email = toEmail,
+                        name = toName ?? toEmail
                     }
                 },
-                variables = request.Variables,
-                from = new
+                subject = subject,
+                htmlContent = htmlContent
+            };
+
+            try
+            {
+                var response = await client.PostAsJsonAsync("smtp/email", brevoPayload);
+                var responseText = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
                 {
-                    email = _settings.FromEmail,
-                    name = _settings.FromName
-                },
-                subject = request.Subject
-            };
+                    var result = JsonSerializer.Deserialize<JsonElement>(responseText);
+                    var messageId = result.TryGetProperty("messageId", out var id)
+                        ? id.ToString()
+                        : "sent";
 
-            var json = JsonSerializer.Serialize(payload, new JsonSerializerOptions
+                    _logger.LogInformation($"Email sent to {toEmail}. MessageId: {messageId}");
+
+                    return new EmailServiceResult
+                    {
+                        IsSuccess = true,
+                        StatusCode = (int)response.StatusCode,
+                        ResponseText = responseText,
+                        MessageId = messageId
+                    };
+                }
+                else
+                {
+                    _logger.LogError($"Brevo error ({response.StatusCode}): {responseText}");
+
+                    return new EmailServiceResult
+                    {
+                        IsSuccess = false,
+                        StatusCode = (int)response.StatusCode,
+                        ResponseText = responseText
+                    };
+                }
+            }
+            catch (Exception ex)
             {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
+                _logger.LogError($"Exception sending email: {ex.Message}");
 
-            var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await client.PostAsync("https://api.mailersend.com/v1/email", content);
-            var responseText = await response.Content.ReadAsStringAsync();
-
-            return new EmailServiceResult
-            {
-                IsSuccess = response.IsSuccessStatusCode,
-                StatusCode = (int)response.StatusCode,
-                ResponseText = responseText
-            };
+                return new EmailServiceResult
+                {
+                    IsSuccess = false,
+                    StatusCode = 500,
+                    ResponseText = $"Internal error: {ex.Message}"
+                };
+            }
         }
     }
 
@@ -69,6 +104,7 @@ namespace axion_mail_service.Services
     {
         public bool IsSuccess { get; set; }
         public int StatusCode { get; set; }
-        public string ResponseText { get; set; }
+        public string ResponseText { get; set; } = string.Empty;
+        public string? MessageId { get; set; }
     }
 }

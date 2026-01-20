@@ -1,10 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>axion_mail_service</RootNamespace>
+    <UserSecretsId>ecb529cd-0029-4273-9090-5fdbcbd45f03</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
