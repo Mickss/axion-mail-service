@@ -5,6 +5,7 @@ namespace axion_mail_service.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Route("")]
     public class EmailController : ControllerBase
     {
         private readonly IEmailService _emailService;
@@ -19,7 +20,7 @@ namespace axion_mail_service.Controllers
             _emailService = emailService;
         }
 
-        [HttpPost("send")]
+        [HttpPost("public/email/send")]
         public async Task<IActionResult> SendEmail([FromBody] EmailRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.ToEmail) ||
