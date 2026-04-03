@@ -9,6 +9,36 @@ namespace axion_mail_service.Controllers
     {
         private readonly IEmailService _emailService;
 
+        private static readonly Dictionary<string, (string Subject, string HtmlContent)> Templates = new()
+        {
+            ["WELCOME"] = (
+                Subject: "Witaj w app.disc-golf.pl! 👋",
+                HtmlContent: """
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2>Cześć! 🙌</h2>
+                        <p>Fajnie, że jesteś z nami! Twoje konto w <strong>app.disc-golf.pl</strong> zostało właśnie utworzone.</p>
+
+                        <h3>Co tu znajdziesz?</h3>
+                        <ul>
+                            <li>📅 aktualne turnieje i wydarzenia disc golfowe w Polsce</li>
+                            <li>🔔 przypomnienia o zbliżającej się rejestracji na turnieje</li>
+                            <li>📍 jedno miejsce zamiast przeszukiwania Facebooka i dziesięciu grup naraz</li>
+                        </ul>
+
+                        <p>To narzędzie robione przez graczy dla graczy. Ma być prosto, czytelnie i bez zbędnego chaosu.</p>
+
+                        <p>👉 Wejdź, sprawdź co się dzieje i dodaj kolejne zawody do kalendarza.<br/>
+                        Jeśli czegoś brakuje albo coś nie działa – daj znać.<br/>
+                        Ta aplikacja będzie cały czas się rozwijać.</p>
+
+                        <br/>
+                        <p>Pozdrawiamy,<br/><strong>Zespół app.disc-golf.pl</strong></p>
+                    </div>
+                """
+            )
+            // ["TOURNAMENT_REMINDER"] = ( Subject: "...", HtmlContent: "..." )
+        };
+
         public EmailController(IEmailService emailService)
         {
             _emailService = emailService;
@@ -18,16 +48,20 @@ namespace axion_mail_service.Controllers
         public async Task<IActionResult> SendEmail([FromBody] EmailRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.ToEmail) ||
-                string.IsNullOrWhiteSpace(request.Subject) ||
-                string.IsNullOrWhiteSpace(request.HtmlContent))
+                string.IsNullOrWhiteSpace(request.EventType))
             {
-                return BadRequest(new { error = "ToEmail, Subject and HtmlContent are required" });
+                return BadRequest(new { error = "ToEmail and EventType are required" });
+            }
+
+            if (!Templates.TryGetValue(request.EventType, out var template))
+            {
+                return BadRequest(new { error = $"Unknown EventType: {request.EventType}" });
             }
 
             var result = await _emailService.SendEmailAsync(
                 request.ToEmail,
-                request.Subject,
-                request.HtmlContent,
+                template.Subject,
+                template.HtmlContent,
                 request.ToName
             );
 
@@ -50,8 +84,7 @@ namespace axion_mail_service.Controllers
 
     public record EmailRequest(
         string ToEmail,
-        string Subject,
-        string HtmlContent,
+        string EventType,
         string? ToName = null
     );
 }
