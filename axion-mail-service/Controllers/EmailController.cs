@@ -5,29 +5,43 @@ namespace axion_mail_service.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Route("")]
     public class EmailController : ControllerBase
     {
         private readonly IEmailService _emailService;
+
+        private static readonly List<Dictionary<string, (string Subject, string HtmlContent)>> AllTemplates = new()
+        {
+            EmailTemplatesWelcome.Templates,
+        };
 
         public EmailController(IEmailService emailService)
         {
             _emailService = emailService;
         }
 
-        [HttpPost("send")]
+        [HttpPost("public/email/send")]
         public async Task<IActionResult> SendEmail([FromBody] EmailRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.ToEmail) ||
-                string.IsNullOrWhiteSpace(request.Subject) ||
-                string.IsNullOrWhiteSpace(request.HtmlContent))
+                string.IsNullOrWhiteSpace(request.EventType))
             {
-                return BadRequest(new { error = "ToEmail, Subject and HtmlContent are required" });
+                return BadRequest(new { error = "ToEmail and EventType are required" });
+            }
+
+            var template = AllTemplates
+                .SelectMany(t => t)
+                .FirstOrDefault(t => t.Key == request.EventType);
+
+            if (template.Key == null)
+            {
+                return BadRequest(new { error = $"Unknown EventType: {request.EventType}" });
             }
 
             var result = await _emailService.SendEmailAsync(
                 request.ToEmail,
-                request.Subject,
-                request.HtmlContent,
+                template.Value.Subject,
+                template.Value.HtmlContent,
                 request.ToName
             );
 
@@ -50,8 +64,7 @@ namespace axion_mail_service.Controllers
 
     public record EmailRequest(
         string ToEmail,
-        string Subject,
-        string HtmlContent,
+        string EventType,
         string? ToName = null
     );
 }
