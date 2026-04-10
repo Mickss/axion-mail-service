@@ -21,6 +21,16 @@ namespace axion_mail_service.Controllers
             _emailService = emailService;
         }
 
+        private static string FillTemplate(string htmlContent, List<string>? parameters)
+        {
+            if (parameters == null) return htmlContent;
+            for (int i = 0; i < parameters.Count; i++)
+            {
+                htmlContent = htmlContent.Replace($"{{{i}}}", parameters[i]);
+            }
+            return htmlContent;
+        }
+
         [HttpPost("public/email/send")]
         public async Task<IActionResult> SendEmail([FromBody] EmailRequest request)
         {
@@ -42,7 +52,7 @@ namespace axion_mail_service.Controllers
             var result = await _emailService.SendEmailAsync(
                 request.ToEmail,
                 template.Value.Subject,
-                string.Format(template.Value.HtmlContent, request.ResetLink ?? request.ToName ?? request.ToEmail),
+                FillTemplate(template.Value.HtmlContent, request.TemplateParams),
                 request.ToName
             );
 
@@ -67,6 +77,6 @@ namespace axion_mail_service.Controllers
         string ToEmail,
         string EventType,
         string? ToName = null,
-        string? ResetLink = null
+        List<string>? TemplateParams = null
     );
 }
