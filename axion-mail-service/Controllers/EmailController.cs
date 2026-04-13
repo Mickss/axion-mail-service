@@ -13,11 +13,22 @@ namespace axion_mail_service.Controllers
         private static readonly List<Dictionary<string, (string Subject, string HtmlContent)>> AllTemplates = new()
         {
             EmailTemplatesWelcome.Templates,
+            EmailTemplatesPasswordReset.Templates,
         };
 
         public EmailController(IEmailService emailService)
         {
             _emailService = emailService;
+        }
+
+        private static string FillTemplate(string htmlContent, List<string>? parameters)
+        {
+            if (parameters == null) return htmlContent;
+            for (int i = 0; i < parameters.Count; i++)
+            {
+                htmlContent = htmlContent.Replace($"{{{i}}}", parameters[i]);
+            }
+            return htmlContent;
         }
 
         [HttpPost("public/email/send")]
@@ -41,7 +52,7 @@ namespace axion_mail_service.Controllers
             var result = await _emailService.SendEmailAsync(
                 request.ToEmail,
                 template.Value.Subject,
-                template.Value.HtmlContent,
+                FillTemplate(template.Value.HtmlContent, request.TemplateParams),
                 request.ToName
             );
 
@@ -65,6 +76,7 @@ namespace axion_mail_service.Controllers
     public record EmailRequest(
         string ToEmail,
         string EventType,
-        string? ToName = null
+        string? ToName = null,
+        List<string>? TemplateParams = null
     );
 }
