@@ -4,7 +4,6 @@ using axion_mail_service.Services;
 namespace axion_mail_service.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
     [Route("")]
     public class EmailController : ControllerBase
     {
