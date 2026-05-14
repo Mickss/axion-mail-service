@@ -25,7 +25,6 @@
                     </div>
                 """
             )
-            // ["TOURNAMENT_REMINDER"] = ( Subject: "...", HtmlContent: "..." )
         };
     }
 }
