@@ -31,7 +31,7 @@ namespace axion_mail_service.Controllers
         }
 
         [HttpPost("public/email/send")]
-        public async Task<IActionResult> SendEmail([FromBody] EmailRequest request)
+        public async Task<IActionResult> SendEmail([FromBody] EmailWithTemplateRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.ToEmail) ||
                 string.IsNullOrWhiteSpace(request.EventType))
@@ -72,7 +72,7 @@ namespace axion_mail_service.Controllers
         }
 
         [HttpPost("public/email/send-raw")]
-        public async Task<IActionResult> SendRawEmail([FromBody] EmailRequest request)
+        public async Task<IActionResult> SendRawEmail([FromBody] EmailRawRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.ToEmail) ||
                 string.IsNullOrWhiteSpace(request.Subject) ||
@@ -105,12 +105,16 @@ namespace axion_mail_service.Controllers
         }
     }
 
-    public record EmailRequest(
+    public record EmailWithTemplateRequest(
         string ToEmail,
-        string? EventType = null,
+        string EventType,
         string? ToName = null,
-        string? Subject = null,
-        string? Body = null,
         List<string>? TemplateParams = null
+    );
+    public record EmailRawRequest(
+        string ToEmail,
+        string Subject,
+        string Body,
+        string? ToName = null
     );
 }
