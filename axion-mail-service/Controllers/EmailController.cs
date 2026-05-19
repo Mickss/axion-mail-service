@@ -31,7 +31,7 @@ namespace axion_mail_service.Controllers
         }
 
         [HttpPost("public/email/send")]
-        public async Task<IActionResult> SendEmail([FromBody] EmailRequest request)
+        public async Task<IActionResult> SendEmail([FromBody] EmailWithTemplateRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.ToEmail) ||
                 string.IsNullOrWhiteSpace(request.EventType))
@@ -50,7 +50,7 @@ namespace axion_mail_service.Controllers
 
             var result = await _emailService.SendEmailAsync(
                 request.ToEmail,
-                template.Value.Subject,
+                FillTemplate(template.Value.Subject, request.TemplateParams),
                 FillTemplate(template.Value.HtmlContent, request.TemplateParams),
                 request.ToName
             );
@@ -70,12 +70,51 @@ namespace axion_mail_service.Controllers
                 messageId = result.MessageId
             });
         }
+
+        [HttpPost("public/email/send-raw")]
+        public async Task<IActionResult> SendRawEmail([FromBody] EmailRawRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request.ToEmail) ||
+                string.IsNullOrWhiteSpace(request.Subject) ||
+                string.IsNullOrWhiteSpace(request.Body))
+            {
+                return BadRequest(new { error = "ToEmail, Subject, and Body are required for raw email sending" });
+            }
+
+            var result = await _emailService.SendEmailAsync(
+                request.ToEmail,
+                request.Subject,
+                request.Body,
+                request.ToName
+            );
+
+            if (!result.IsSuccess)
+            {
+                return StatusCode(result.StatusCode, new
+                {
+                    error = "Failed to send raw email",
+                    details = result.ResponseText
+                });
+            }
+
+            return Ok(new
+            {
+                message = "Raw email sent successfully",
+                messageId = result.MessageId
+            });
+        }
     }
 
-    public record EmailRequest(
+    public record EmailWithTemplateRequest(
         string ToEmail,
         string EventType,
         string? ToName = null,
         List<string>? TemplateParams = null
+    );
+    public record EmailRawRequest(
+        string ToEmail,
+        string Subject,
+        string Body,
+        string? ToName = null
     );
 }
